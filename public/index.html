@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Uploader de Stock</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { --bg:#0b0b0c; --card:#141416; --muted:#979aa1; --ok:#0bb26a; --border:#2a2c31; --text:#e9e9ea; }
+    body { font-family: system-ui, Arial, sans-serif; max-width: 720px; margin: 40px auto; color: var(--text); background: var(--bg); }
+    .card { background: var(--card); border: 1px solid var(--border); padding: 20px; border-radius: 14px; }
+    label { display:block; margin: 14px 0 6px; font-weight: 600; }
+    select, input[type="text"], input[type="file"] {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background:#0f0f11; color: var(--text);
+    }
+    button { padding: 12px 16px; margin-top: 16px; cursor: pointer; border: 0; border-radius: 12px; background: #2563eb; color: white; font-weight: 600; }
+    .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+    /* Modal */
+    .modal {
+      position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.55);
+    }
+    .modal.active { display: flex; }
+    .modal .box {
+      background: #101214; border: 1px solid var(--border); border-radius: 16px; padding: 24px; max-width: 420px; width: 92%;
+      text-align: center;
+    }
+    .check { font-size: 36px; color: var(--ok); margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Subir archivo de stock</h1>
+  <div class="card">
+    <form id="form">
+      <label for="deposito">Depósito / Categoría</label>
+      <select id="deposito" name="deposito" required>
+        <option value="" disabled selected>Elegir…</option>
+        <option value="olav">olav</option>
+        <option value="polo">polo</option>
+        <option value="cba">cba</option>
+        <option value="llantas">llantas</option>
+        <option value="camaras">camaras</option>
+        <option value="protectores">protectores</option>
+        <option value="personalizado">Personalizado…</option>
+      </select>
+      <div id="customWrap" style="display:none;">
+        <label for="customName">Nombre personalizado</label>
+        <input type="text" id="customName" name="customName" placeholder="ej: mar_del_plata" />
+        <div class="hint">Se guardará en la colección <code>stock_[nombre]</code> dentro de la base <code>test</code>.</div>
+      </div>
+
+      <label for="file">Archivo XLS/XLSX</label>
+      <input type="file" id="file" name="file" accept=".xls,.xlsx" required />
+
+      <button type="submit">Subir y guardar</button>
+      <div class="hint">Se reemplazará el contenido previo de esa colección.</div>
+    </form>
+  </div>
+
+  <!-- Modal de éxito -->
+  <div class="modal" id="modalOk" role="dialog" aria-modal="true" aria-labelledby="okTitle">
+    <div class="box">
+      <div class="check">✔️</div>
+      <h2 id="okTitle">Stock cargado correctamente</h2>
+      <p id="okDetail" class="hint"></p>
+      <button id="closeModal">Cerrar</button>
+    </div>
+  </div>
+
+  <script>
+    const depositoEl = document.getElementById('deposito');
+    const customWrap = document.getElementById('customWrap');
+    const customNameEl = document.getElementById('customName');
+    const form = document.getElementById('form');
+    const modal = document.getElementById('modalOk');
+    const okDetail = document.getElementById('okDetail');
+    const closeModal = document.getElementById('closeModal');
+
+    depositoEl.addEventListener('change', () => {
+      if (depositoEl.value === 'personalizado') {
+        customWrap.style.display = 'block';
+        customNameEl.required = true;
+      } else {
+        customWrap.style.display = 'none';
+        customNameEl.required = false;
+        customNameEl.value = '';
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const fd = new FormData(form);
+      try {
+        const res = await fetch('/upload', { method: 'POST', body: fd });
+        const json = await res.json();
+        if (res.ok && json.ok) {
+          okDetail.textContent = `Colección: ${json.collection} · Registros: ${json.inserted}`;
+          modal.classList.add('active');
+          form.reset();
+          customWrap.style.display = 'none';
+        } else {
+          alert('Error: ' + (json.error || 'Error desconocido'));
+        }
+      } catch (err) {
+        alert('Error de red: ' + err.message);
+      }
+    });
+
+    closeModal.addEventListener('click', () => modal.classList.remove('active'));
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); });
+  </script>
+</body>
+</html>
